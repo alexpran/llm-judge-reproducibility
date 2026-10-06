@@ -2,18 +2,19 @@
 """Smoke test of the call-and-record loop (PROTOCOL.md §9.2). Real calls.
 
 Usage:
-    python3 scripts/smoke_test.py --scout PATH/TO/scout [--plan]
+    python3 scripts/smoke_test.py --scout PATH/TO/scout [--out PATH] [--plan]
 
 Cases: the first 10 of scout's cases.json in id order (a fixed rule), never a
 case of the corpus: the script refuses to start if any of them shares a Reddit
 id with corpus/case_ids.json. Requests are built by scripts/judge.py from the
 vars stored in cases.json; 2 consecutive calls per case, in id order.
 
-Lines go to raw/smoke/smoke.jsonl in run.py's format, with case ids s01..s10
-in place of scout's ids, which carry the Reddit id. run = 0 and seed = null
-mark them as not belonging to any run. The script stops after the first call
+Lines go to --out (default raw/smoke/smoke.jsonl) in run.py's format, with
+case ids s01..s10 in place of scout's ids, which carry the Reddit id. run = 0
+and seed = null mark them as not belonging to any run. The script stops after the first call
 if that call is an error, and before any call that would start past --max-usd.
-It refuses to overwrite an existing output file.
+It refuses to overwrite an existing output file. The log sits next to it, with
+the same name and the extension .log.
 
 --plan prints the number of calls and the estimate, and makes none.
 """
@@ -69,6 +70,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--scout", type=Path, required=True)
     parser.add_argument("--max-usd", type=float, default=1.0)
+    parser.add_argument("--out", type=Path, default=OUT)
     parser.add_argument("--plan", action="store_true")
     args = parser.parse_args()
 
@@ -81,8 +83,8 @@ def main() -> None:
               f"{calls * WORST_USD_PER_CALL:.2f} USD (worst), cap {args.max_usd} USD")
         if args.plan:
             return
-        if OUT.exists():
-            raise run.Stop(f"{OUT} exists; the smoke test is not resumed")
+        if args.out.exists():
+            raise run.Stop(f"{args.out} exists; the smoke test is not resumed")
         pinned = run.pinned_sdk()
         import anthropic
 
@@ -96,15 +98,15 @@ def main() -> None:
     except run.Stop as exc:
         sys.exit(f"smoke_test: {exc}")
 
-    OUT.parent.mkdir(parents=True, exist_ok=True)
-    log_path = OUT.with_suffix(".log")
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    log_path = args.out.with_suffix(".log")
     prompts = judge.load_prompts()
     run.log(log_path, f"start smoke cases={len(chosen)} samples={SAMPLES} "
                       f"max_usd={args.max_usd} sdk=anthropic {anthropic.__version__} "
                       f"repo={repo_sha} dirty_paths={len(dirty)} {run.environment()}")
     spent = 0.0
     made = 0
-    with OUT.open("a", encoding="utf-8") as handle:
+    with args.out.open("a", encoding="utf-8") as handle:
         for index, case in enumerate(chosen, start=1):
             vars = judge.judge_vars(**case["vars"])
             request = judge.build_request(vars, prompts)
@@ -127,7 +129,7 @@ def main() -> None:
                     sys.exit(f"smoke_test: first call failed: {line['error_type']}: "
                              f"{line['error']}")
     run.log(log_path, f"end smoke: {made} calls, estimated cost {spent:.4f} USD")
-    print(f"done: {made} calls, estimated {spent:.4f} USD -> {OUT}")
+    print(f"done: {made} calls, estimated {spent:.4f} USD -> {args.out}")
 
 
 if __name__ == "__main__":
