@@ -74,8 +74,8 @@ Known limits of the corpus:
 - **Runs:** 6. A run is one pass over all cases.
 - **Samples:** 5 consecutive calls per case within a run. 30 calls per case in total.
 - **Planned calls:** 15,990.
-- **Order:** serial, one call at a time. The order of cases is shuffled in each run with a seed fixed here: `TBD` (six seeds).
-- **Calendar:** at most two runs per calendar day, on at least three different days. Planned dates: `TBD`.
+- **Order:** serial, one call at a time. The order of cases is shuffled in each run with a fixed seed: 101, 102, 103, 104, 105, 106 for runs 1 to 6.
+- **Calendar:** two runs per day, starting at about 09:00 and 15:00 Rome time, on three consecutive working days beginning with the first working day after the freeze. If the first run of a day is still going at 15:00, the second starts when it ends. Actual start and end times are in each run's log.
 - **Request:** identical to production. Before the first run, the assembled request for a set of cases is hashed and compared with the one built by scout's own `ScoutJudge`. They must match byte for byte (§9.1).
 - **Environment:** the client sends its operating system, architecture and runtime version in request headers. All runs are made from the machine and the Python environment that scout's daily run uses, recorded in each run's log.
 
@@ -120,7 +120,7 @@ Cases with fewer than 25 valid samples are reported in a separate row and not bi
 
 1. The distribution of cases over the four bins, for each stratum and for the whole corpus, with exact 95% binomial intervals on each proportion. Because both strata are included in full, the whole-corpus distribution is the distribution over the flow the judge actually saw in the window. The same distribution is also reported by modal verdict of the case (`skip`, `upvote`, `comment`, `comment+tool`), so that cases stable on `skip` and cases stable on a proposed verdict appear separately, and by label status (labelled, deferred). These breakdowns are descriptive counts: some cells are small and no test is run on them.
 2. The number of cases with at least one non-unanimous run, and the number of between-run unstable cases, per stratum.
-3. Whether between-run variation exceeds what within-run variation predicts. Test statistic: number of between-run unstable cases. Reference distribution: 10,000 permutations of each case's 30 samples across its six runs, seed `TBD`. Reported as the observed value against the permutation distribution.
+3. Whether between-run variation exceeds what within-run variation predicts. Test statistic: number of between-run unstable cases. Reference distribution: 10,000 permutations of each case's 30 samples across its six runs, seed 2606. Reported as the observed value against the permutation distribution.
 4. For each case, the number of errors by type is reported next to its bin.
 
 Where a count is zero, the result is reported as an upper bound, not as zero. The stable bin is itself an upper bound: on the pilot, about one in eight cases that flip over 75 samples shows no flip in 30.
