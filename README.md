@@ -16,6 +16,14 @@ The cases are real Reddit threads together with the author's own labels and the 
 `corpus/MANIFEST.txt` records the sha256 of the frozen source file and the case counts; nothing else under `corpus/` is tracked.
 Raw per-call logs (`raw/`) contain thread text and are not tracked either.
 
+## Response headers
+
+All response headers of each call are kept in the raw files (`raw/`, not tracked). Only some of them enter the published matrix.
+
+- Published: `request-id`, `cf-ray`, `traceresponse`, `date`.
+- Not published, because they identify the account or its service level: `anthropic-organization-id`, `anthropic-workspace-id`, and all `anthropic-ratelimit-*` headers.
+- Constant across calls, not in the matrix: `server`, `connection`, `content-type`, `content-encoding`, `transfer-encoding`, `vary`, `cf-cache-status`, `content-security-policy`, `strict-transport-security`, `x-robots-tag`.
+
 ## How this works
 
 - Changes to the protocol go through an issue or a pull request.

@@ -89,7 +89,7 @@ Samples already obtained are never discarded because a later call on the same ca
 
 `usage` includes the serving metadata returned by the API (`service_tier`, `inference_geo`); any variation across calls is reported.
 
-All response headers are stored in the raw file. The published matrix includes the request id and the serving-side identifiers among them, listed by name in the README; headers that identify the account are not published.
+All response headers are stored in the raw file. The published matrix includes the request id and the serving-side identifiers among them, listed by name in the README; headers that identify the account are not published. On the checks of 2026-10-06 the API returned 28 response headers. None identifies the serving model or replica: the only per-request identifiers are `request-id`, `cf-ray` and `traceresponse`.
 
 ## 6. Definitions
 
@@ -141,9 +141,9 @@ No other analysis will be reported as planned.
 
 **9.1 Request identity.** The request built by the experiment script equals the one built by scout's `ScoutJudge`, compared by hash of the canonical JSON of the arguments, on all 144 cases of the old set and on all 533 cases of the corpus: 677 of 677 identical. A negative control (one space added to the system prompt) gave 0 of 677. No request was sent. The comparison was repeated at the HTTP level (method, URL, headers except authentication and retry count, body): 677 of 677 identical. A second control (one header added on the experiment side) gave 0 of 677.
 
-**9.2 Smoke test.** About 20 calls on cases from the old 145-case set, to confirm that every field in §5 is written and that the API reports thinking tokens for this model. These calls are not data and touch no case of the corpus. Done on 2026-10-06: 20 calls, 20 succeeded, all fields written, request ids present. The API reports thinking tokens in `usage.output_tokens_details.thinking_tokens`; in 2 of 20 calls the value was 0.
+**9.2 Smoke test.** About 20 calls on cases from the old 145-case set, to confirm that every field in §5 is written and that the API reports thinking tokens for this model. These calls are not data and touch no case of the corpus. Done on 2026-10-06: 20 calls, 20 succeeded, all fields written, request ids present. The API reports thinking tokens in `usage.output_tokens_details.thinking_tokens`; in 2 of 20 calls the value was 0. Repeated on 2026-10-06 after the response-header change: 20 calls, 20 succeeded, one HTTP response per call.
 
-**9.3 Smoke check on Tamba's seven items.** The seven items of the Zenodo record 20674090 (v1.1) are sent once each through the call-and-record loop used here, with the grader prompt and the grade extraction of that harness and the same model, thinking setting and `max_tokens` as §2, with no sampling parameters. The only purpose is to confirm that every field in §5 is written for a second prompt and parser. No rate is computed and nothing is compared with the paper. The items are used with the author's agreement (issue #1) and are not redistributed.
+**9.3 Smoke check on Tamba's seven items.** The seven items of the Zenodo record 20674090 (v1.1) are sent once each through the call-and-record loop used here, with the grader prompt and the grade extraction of that harness and the same model, thinking setting and `max_tokens` as §2, with no sampling parameters. The only purpose is to confirm that every field in §5 is written for a second prompt and parser. No rate is computed and nothing is compared with the paper. The items are used with the author's agreement (issue #1) and are not redistributed. Done on 2026-10-06: 7 calls, 7 succeeded, every field written.
 
 ## 10. Stopping rule and budget
 
@@ -162,6 +162,8 @@ Anything that departs from this document is written in `DEVIATIONS.md`, with dat
 |---|---|---|
 | 2026-10-06 08:13 | Probe: `temperature=0` with adaptive thinking on `claude-sonnet-5`. HTTP 400. Request `req_011CfkeaXnRr7xwxDgxiDwnK` | 1 |
 | 2026-10-06 12:28–12:30 | Smoke test (§9.2): 10 cases from the old set × 2 calls | 20 |
+| 2026-10-06 14:20–14:23 | Smoke test repeated (§9.2): 10 cases from the old set × 2 calls | 20 |
+| 2026-10-06 14:23 | Smoke check on Tamba's seven items (§9.3) | 7 |
 
 No call has been made on any of the 533 cases.
 
