@@ -16,8 +16,8 @@ resumption is logged next to the output, in run-0N.log.
 
 A real run refuses to start unless the installed anthropic SDK is the version
 pinned in requirements.txt and the git working tree is clean (--allow-dirty
-overrides the second, and is logged). The log records the SDK version and the
-repository commit.
+overrides the second, and is logged). The log records the SDK version, the
+repository commit, and the operating system, architecture and Python version.
 
 The SDK reads ANTHROPIC_API_KEY from the environment. --dry-run builds every
 request and needs neither the key, the SDK, a clean tree nor the network.
@@ -38,6 +38,7 @@ import argparse
 import hashlib
 import json
 import os
+import platform
 import random
 import re
 import subprocess
@@ -327,6 +328,13 @@ def read_existing(out: Path, run_index: int, seed: int) -> list[dict]:
     return rows
 
 
+def environment() -> str:
+    """The machine as the SDK describes it in its request headers (operating
+    system, architecture, Python runtime), for the run's log."""
+    return (f"os={platform.system()} {platform.release()} arch={platform.machine()} "
+            f"python={platform.python_implementation()} {platform.python_version()}")
+
+
 def append_line(handle, row: dict) -> None:
     handle.write(canonical(row) + "\n")
     handle.flush()
@@ -373,7 +381,7 @@ def run(
                       f"previous session ended before completion")
     log(log_path, f"start run={run_index} seed={seed} samples={samples} "
                   f"cases={len(order)} planned={planned} max_usd={max_usd} "
-                  f"sdk=anthropic {sdk_version} repo={repo_sha}")
+                  f"sdk=anthropic {sdk_version} repo={repo_sha} {environment()}")
     if allow_dirty:
         log(log_path, f"allow_dirty: working tree had {dirty_paths} uncommitted "
                       f"path(s) at start")

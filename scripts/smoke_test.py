@@ -101,7 +101,7 @@ def main() -> None:
     prompts = judge.load_prompts()
     run.log(log_path, f"start smoke cases={len(chosen)} samples={SAMPLES} "
                       f"max_usd={args.max_usd} sdk=anthropic {anthropic.__version__} "
-                      f"repo={repo_sha} dirty_paths={len(dirty)}")
+                      f"repo={repo_sha} dirty_paths={len(dirty)} {run.environment()}")
     spent = 0.0
     made = 0
     with OUT.open("a", encoding="utf-8") as handle:

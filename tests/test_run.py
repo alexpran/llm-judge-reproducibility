@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import json
+import platform
 import subprocess
 import sys
 import tempfile
@@ -441,6 +442,10 @@ class MainTest(unittest.TestCase):
             run.main(self.argv("--allow-dirty"), make_client=FakeClient)
         log = self.out.with_suffix(".log").read_text()
         self.assertIn("repo=abc123", log)
+        self.assertIn(f"os={platform.system()} {platform.release()}", log)
+        self.assertIn(f"arch={platform.machine()}", log)
+        self.assertIn(f"python={platform.python_implementation()} "
+                      f"{platform.python_version()}", log)
         self.assertIn("allow_dirty: working tree had 1 uncommitted path(s)", log)
 
     def test_dry_run_ignores_a_dirty_tree(self):
