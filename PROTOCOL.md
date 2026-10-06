@@ -201,4 +201,7 @@ The author maintains digline, an open source regression gate for LLM application
 
 ## 17. Contributions
 
-Alessandro Prandini: corpus, design, scripts, first draft of this protocol. Hiroki Tamba: review of the protocol before the freeze; the breakdown of bins by modal verdict and the per-case error counts (#4); the caveat on the `model` field, the recording of serving-side identifiers and the labelled/deferred breakdown (#5); the reduction of the anchor to a smoke check (#1). The question comes from §5.4 of his paper (arXiv:2606.26185).
+- **Alessandro Prandini:** corpus, design, scripts, first draft of this protocol.
+- **Hiroki Tamba:** review of the protocol before the freeze; the breakdown of bins by modal verdict and the per-case error counts (#4); the caveat on the `model` field, the recording of serving-side identifiers and the labelled/deferred breakdown (#5); the reduction of the anchor to a smoke check (#1).
+
+The question comes from §5.4 of Tamba's paper (arXiv:2606.26185).
