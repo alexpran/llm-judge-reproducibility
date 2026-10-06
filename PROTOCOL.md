@@ -77,6 +77,7 @@ Known limits of the corpus:
 - **Order:** serial, one call at a time. The order of cases is shuffled in each run with a seed fixed here: `TBD` (six seeds).
 - **Calendar:** at most two runs per calendar day, on at least three different days. Planned dates: `TBD`.
 - **Request:** identical to production. Before the first run, the assembled request for a set of cases is hashed and compared with the one built by scout's own `ScoutJudge`. They must match byte for byte (§9.1).
+- **Environment:** the client sends its operating system, architecture and runtime version in request headers. All runs are made from the machine and the Python environment that scout's daily run uses, recorded in each run's log.
 
 "Within a run" therefore means five calls seconds apart. "Between runs" means the same case hours or days apart, with weights fixed.
 
@@ -138,7 +139,7 @@ No other analysis will be reported as planned.
 
 ## 9. Instrument checks
 
-**9.1 Request identity.** The request built by the experiment script equals the one built by scout's `ScoutJudge`, compared by hash of the canonical JSON of the arguments, on all 144 cases of the old set and on all 533 cases of the corpus: 677 of 677 identical. A negative control (one space added to the system prompt) gave 0 of 677. No request was sent.
+**9.1 Request identity.** The request built by the experiment script equals the one built by scout's `ScoutJudge`, compared by hash of the canonical JSON of the arguments, on all 144 cases of the old set and on all 533 cases of the corpus: 677 of 677 identical. A negative control (one space added to the system prompt) gave 0 of 677. No request was sent. The comparison was repeated at the HTTP level (method, URL, headers except authentication and retry count, body): 677 of 677 identical. A second control (one header added on the experiment side) gave 0 of 677.
 
 **9.2 Smoke test.** About 20 calls on cases from the old 145-case set, to confirm that every field in §5 is written and that the API reports thinking tokens for this model. These calls are not data and touch no case of the corpus. Done on 2026-10-06: 20 calls, 20 succeeded, all fields written, request ids present. The API reports thinking tokens in `usage.output_tokens_details.thinking_tokens`; in 2 of 20 calls the value was 0.
 
