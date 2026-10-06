@@ -6,7 +6,7 @@ The question is how disagreement is distributed across cases: how many are stabl
 
 ## Status
 
-- `PROTOCOL.md` is a **draft, not yet frozen**. Items marked `TBD` are still open.
+- `PROTOCOL.md` is a **draft, not yet frozen**. No open item is left in the protocol. It is a draft until both authors agree on the freeze.
 - **No call has been made on the corpus.** Calls made before the protocol are listed in `PROTOCOL.md` §12.
 - There are no results.
 
@@ -20,8 +20,10 @@ Raw per-call logs (`raw/`) contain thread text and are not tracked either.
 
 All response headers of each call are kept in the raw files (`raw/`, not tracked). Only some of them enter the published matrix.
 
-- Published: `request-id`, `cf-ray`, `traceresponse`, `date`.
-- Not published, because they identify the account or its service level: `anthropic-organization-id`, `anthropic-workspace-id`, and all `anthropic-ratelimit-*` headers.
+- Published: `request-id`, `traceresponse`.
+- Not published, because they identify the account or its rate limits: `anthropic-organization-id`, `anthropic-workspace-id`, and all `anthropic-ratelimit-*` headers.
+- Not published, because it shows the network location of the client: `cf-ray`.
+- Not in the matrix, because it is redundant with the call's start time: `date`.
 - Constant across calls, not in the matrix: `server`, `connection`, `content-type`, `content-encoding`, `transfer-encoding`, `vary`, `cf-cache-status`, `content-security-policy`, `strict-transport-security`, `x-robots-tag`.
 
 ## How this works
@@ -36,9 +38,16 @@ All response headers of each call are kept in the raw files (`raw/`, not tracked
 - `DEVIATIONS.md`: departures from the frozen protocol
 - `prompts/`: the judge's system prompt and user template, copied from `scout` (see `prompts/SOURCE.txt`)
 - `corpus/MANIFEST.txt`: hash and counts of the corpus
-- `scripts/`: case export, run script, request identity check
-- `tests/`: offline tests for the run script (no network)
-- `results/`: empty for now
+- `scripts/`:
+  - `export_cases.py`: case export from the frozen state file
+  - `judge.py`, `run.py`: request building and the run script
+  - `check_request_identity.py`, `smoke_test.py`, `anchor_smoke.py`: instrument checks (§9)
+  - `pilot_check.py`: check of the sample size and bins on the pilot (§13)
+  - `make_matrix.py`: raw run files to `results/matrix.csv`, with public ids
+  - `analyze.py`: the analyses of §6–§8, from the matrix alone
+  - `pilot_to_matrix.py`: first six pilot runs in the matrix format, for a cross-check of `analyze.py` against `pilot_check.py`
+- `tests/`: offline tests for the run, anchor smoke check, matrix and analysis scripts (no network)
+- `results/`: matrix, analysis and their MANIFEST once produced; not tracked until they are published
 
 ## Environment
 

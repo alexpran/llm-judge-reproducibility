@@ -110,30 +110,33 @@ All response headers are stored in the raw file. The published matrix includes t
 | Unstable | ≥ 0.6 and < 0.8 | 18 to 23 |
 | Coin-like | < 0.6 | 17 or fewer |
 
-Cases with fewer than 25 valid samples are reported in a separate row and not binned.
+**Valid-sample threshold.** With six runs a case needs at least 25 valid samples out of 30; with fewer completed runs the threshold is five sixths of the planned samples, rounded up. Cases below the threshold appear as a row 'below threshold' wherever bins are tabulated, and are left out and counted apart in every other analysis.
 
 **Within-run disagreement.** A (case, run) pair is non-unanimous if its valid samples are not all equal.
 
-**Between-run disagreement.** The run verdict of a case is the modal raw verdict of its samples in that run. A tie is its own value. A case is between-run unstable if its six run verdicts are not all equal.
+**Between-run disagreement.** The run verdict of a case is the modal raw verdict of its samples in that run. A tie is a single value, whatever the tied verdicts. A run with no valid sample for a case is left out of the comparison for that case. A case is between-run unstable if its six run verdicts are not all equal.
+
+**Overall modal verdict.** The most common raw verdict among all valid samples of a case. A case whose overall modal verdict is tied is reported in a row 'tie'. A case with no valid sample at all is reported in a row 'none'.
 
 ## 7. Primary outcomes
 
-1. The distribution of cases over the four bins, for each stratum and for the whole corpus, with exact 95% binomial intervals on each proportion. Because both strata are included in full, the whole-corpus distribution is the distribution over the flow the judge actually saw in the window. The same distribution is also reported by modal verdict of the case (`skip`, `upvote`, `comment`, `comment+tool`), so that cases stable on `skip` and cases stable on a proposed verdict appear separately, and by label status (labelled, deferred). These breakdowns are descriptive counts: some cells are small and no test is run on them.
+1. The distribution of cases over the four bins, for each stratum and for the whole corpus, with exact 95% binomial intervals on each proportion. Because both strata are included in full, the whole-corpus distribution is the distribution over the flow the judge actually saw in the window. The same distribution is also reported by modal verdict of the case (`skip`, `upvote`, `comment`, `comment+tool`), so that cases stable on `skip` and cases stable on a proposed verdict appear separately, and by label status (labelled, deferred). These breakdowns are descriptive counts: some cells are small and no test is run on them. Proportions are computed over all cases of the group, the 'below threshold' row included. The breakdowns by modal verdict and by label status are given for the whole corpus and for each stratum.
 2. The number of cases with at least one non-unanimous run, and the number of between-run unstable cases, per stratum.
-3. Whether between-run variation exceeds what within-run variation predicts. Test statistic: number of between-run unstable cases. Reference distribution: 10,000 permutations of each case's 30 samples across its six runs, seed 2606. Reported as the observed value against the permutation distribution.
+3. Whether between-run variation exceeds what within-run variation predicts. Test statistic: number of between-run unstable cases. Reference distribution: 10,000 permutations of each case's samples across its runs (all 30 when the case has no error), seed 2606. Reported as the observed value against the permutation distribution. Only valid samples are permuted; errors stay in their run. The test is made on the whole corpus only. A one-sided p-value, (k+1)/(N+1), is reported with no significance threshold.
 4. For each case, the number of errors by type is reported next to its bin.
 
-Where a count is zero, the result is reported as an upper bound, not as zero. The stable bin is itself an upper bound: on the pilot, about one in eight cases that flip over 75 samples shows no flip in 30.
+Where a count is zero, the upper limit of the two-sided exact 95% interval is reported next to it, wherever an interval is given. The stable bin is itself an upper bound: on the pilot, about one in eight cases that flip over 75 samples shows no flip in 30.
 
 ## 8. Secondary analyses (declared, exploratory)
 
-1. The same distribution on the settled verdict, and on pass/fail for the 211 labelled cases.
-2. Discrimination next to reproducibility: agreement of each case's overall modal verdict with the expected verdict, per stratum, and whether unstable cases concentrate among the disagreements.
-3. Thinking tokens against disagreement: rank correlation between a case's mean thinking tokens and 1 − modal share. Hypothesis stated in advance: longer reasoning gives more points where a near-tie can diverge, so disagreement rises with thinking length. With adaptive thinking some calls report zero thinking tokens. Disagreement is also compared between cases where thinking is always present, never present, or present in only some of the 30 calls.
-4. Concentration by original judging day, and by run day.
-5. Cases with empty `text`, reported separately.
+1. The same distribution on the settled verdict, and on pass/fail for the 211 labelled cases. Per stratum and overall, with intervals, without further breakdowns.
+2. Discrimination next to reproducibility: agreement of each case's overall modal verdict with the expected verdict, per stratum, and whether unstable cases concentrate among the disagreements. Computed on the settled verdict with the production rule of §6. Cases whose overall modal verdict is tied are left out and counted apart.
+3. Thinking tokens against disagreement: rank correlation between a case's mean thinking tokens and 1 − modal share. Hypothesis stated in advance: longer reasoning gives more points where a near-tie can diverge, so disagreement rises with thinking length. With adaptive thinking some calls report zero thinking tokens. Disagreement is also compared between cases where thinking is always present, never present, or present in only some of the 30 calls. Thinking tokens are taken from every call that reports them, errors included. Rank correlation is Spearman with average ranks. The three thinking groups are compared by their counts in the bins. A case in which no call reports thinking tokens is left out and counted apart.
+4. Concentration by original judging day: counts in the bins for each day label. By run day: for each of the 15 pairs of runs, the number of cases whose run verdict differs, marked as same day or different days. The day of a run is the Rome date of its first call.
+5. Cases with empty `text`, reported separately. Counts in the bins only.
 6. Error rate by run.
-7. Sensitivity to errors: the bin distribution recomputed with an error counted as its own value over all 30 samples, including the cases with fewer than 25 valid samples.
+7. Sensitivity to errors: the bin distribution recomputed with an error counted as its own value over all 30 samples, including the cases below the valid-sample threshold. An error is a single value, whatever its type. Per stratum and overall, with intervals.
+8. Serving metadata: the distinct values of `model`, `service_tier` and `inference_geo` with the number of calls for each, and the distribution of `attempts`, for the whole corpus and per run.
 
 No other analysis will be reported as planned.
 
@@ -151,6 +154,7 @@ No other analysis will be reported as planned.
 - Budget cap: 350 USD. Estimates: about 150 USD and 15.5 hours of serial calls from the pilot runs, about 216 USD and 30 hours from the smoke test (20 calls). Both come from a different population.
 - A run is the unit. If the remaining budget cannot cover the next run at the observed cost per call, the experiment stops there and the analysis uses the completed runs. This is reported.
 - An interrupted run is resumed from the point of interruption with the same seed, and the interruption is logged with timestamps.
+- With fewer than six completed runs, the matrix is built only with an explicit option and only from complete runs 1 to k. In that case 'six runs', '15 pairs' and '30 samples' in §6 to §8 read as k runs, k(k−1)/2 pairs and 5k samples.
 
 ## 11. Deviations
 
@@ -182,9 +186,12 @@ Use made of it: choosing 30 samples per case and the bin boundaries in §6. Chec
 ## 14. What is published
 
 - This protocol and its git history.
-- The experiment script and the export script.
-- The full matrix of results: one row per call with anonymised case id, stratum, run, sample, timestamp, raw and settled verdict, error flag, thinking tokens.
-- The sha256 of the frozen state file and of the case file.
+- The export, run, matrix and analysis scripts, with their tests.
+- The results matrix, `results/matrix.csv`: one row per call, no free text. Columns: public_id, stratum, label_status, expected, day_label, text_empty, run, seed, sample, started_at, latency_ms, model, stop_reason, verdict_raw, verdict_settled, tool_refused, error_type, attempts, attempt_statuses, hook_failed, output_tokens, thinking_tokens, service_tier, inference_geo, request_id, traceresponse.
+- `results/analysis.json` and `results/tables.md`, produced by `scripts/analyze.py` from the matrix alone.
+- The sha256 of the frozen state file, of the case file, of the six raw files and of the matrix.
+
+Left out of the matrix on purpose: the response text and every other free-text field; the input token count and the cost, because they are a fingerprint of the thread's length; the `cf-ray` header, which shows the network location of the client; the headers that identify the account or its rate limits. Case identifiers are replaced by public ids in random order and judging days by letters in random order; the correspondence stays with the author.
 
 The corpus itself is not published. It is real threads together with the author's own labels and the record of what the author commented on. That is also why it is a useful corpus: it was accumulated by use, not built.
 
