@@ -10,6 +10,12 @@ seen*.json
 # Raw per-call JSONL (contains thread text)
 raw/
 
+# Results: not published until decided (PROTOCOL.md §14)
+results/matrix.csv
+results/analysis.json
+results/tables.md
+results/MANIFEST.txt
+
 # Secrets
 .env
 .env.*
