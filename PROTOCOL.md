@@ -26,8 +26,9 @@ What this is not:
 | Thinking | `{"type": "adaptive"}` |
 | `max_tokens` | 2000 |
 | Output | JSON schema via `output_config` |
-| System prompt | `JUDGE.md`, sha256 `c9c8d0a0a81e…` |
-| User template | `THREAD.md`, sha256 `ffdce2b2f9e5…` |
+| System prompt | `JUDGE.md`, sha256 `c9c8d0a0a81e45c793ae99debf4ba403793bd8b137277194f10681513ecd118e` |
+| User template | `THREAD.md`, sha256 `ffdce2b2f9e527bc83c81e6dfb328a3bbfe0666687e7597dc8d91f7d4dc591e0` |
+| Source of prompts | scout at commit `dfd5187ac0ddaa5968c6b777a1f56f406f21203b`, copied to `prompts/` |
 | Sampling parameters | none sent (`temperature`, `top_p`, `top_k`, `seed` absent) |
 | Verdict vocabulary | `comment`, `comment+tool`, `upvote`, `skip` |
 | Calls | one thread per call, no batching |
@@ -173,7 +174,7 @@ Use made of it: choosing 30 samples per case and the bin boundaries in §6. `TBD
 - The full matrix of results: one row per call with anonymised case id, stratum, run, sample, timestamp, raw and settled verdict, error flag, thinking tokens.
 - The sha256 of the frozen state file and of the case file.
 
-The corpus itself is not published. It is real threads together with the author's own labels and the record of what he commented on. That is also why it is a useful corpus: it was accumulated by use, not built.
+The corpus itself is not published. It is real threads together with the author's own labels and the record of what the author commented on. That is also why it is a useful corpus: it was accumulated by use, not built.
 
 ## 15. Interest
 
