@@ -88,6 +88,8 @@ Samples already obtained are never discarded because a later call on the same ca
 
 `usage` includes the serving metadata returned by the API (`service_tier`, `inference_geo`); any variation across calls is reported.
 
+All response headers are stored in the raw file. The published matrix includes the request id and the serving-side identifiers among them, listed by name in the README; headers that identify the account are not published.
+
 ## 6. Definitions
 
 **Verdict levels.**
@@ -115,9 +117,10 @@ Cases with fewer than 25 valid samples are reported in a separate row and not bi
 
 ## 7. Primary outcomes
 
-1. The distribution of cases over the four bins, for each stratum and for the whole corpus, with exact 95% binomial intervals on each proportion. Because both strata are included in full, the whole-corpus distribution is the distribution over the flow the judge actually saw in the window.
+1. The distribution of cases over the four bins, for each stratum and for the whole corpus, with exact 95% binomial intervals on each proportion. Because both strata are included in full, the whole-corpus distribution is the distribution over the flow the judge actually saw in the window. The same distribution is also reported by modal verdict of the case (`skip`, `upvote`, `comment`, `comment+tool`), so that cases stable on `skip` and cases stable on a proposed verdict appear separately, and by label status (labelled, deferred). These breakdowns are descriptive counts: some cells are small and no test is run on them.
 2. The number of cases with at least one non-unanimous run, and the number of between-run unstable cases, per stratum.
 3. Whether between-run variation exceeds what within-run variation predicts. Test statistic: number of between-run unstable cases. Reference distribution: 10,000 permutations of each case's 30 samples across its six runs, seed `TBD`. Reported as the observed value against the permutation distribution.
+4. For each case, the number of errors by type is reported next to its bin.
 
 Where a count is zero, the result is reported as an upper bound, not as zero.
 
@@ -129,6 +132,7 @@ Where a count is zero, the result is reported as an upper bound, not as zero.
 4. Concentration by original judging day, and by run day.
 5. Cases with empty `text`, reported separately.
 6. Error rate by run.
+7. Sensitivity to errors: the bin distribution recomputed with an error counted as its own value over all 30 samples, including the cases with fewer than 25 valid samples.
 
 No other analysis will be reported as planned.
 
@@ -138,7 +142,7 @@ No other analysis will be reported as planned.
 
 **9.2 Smoke test.** About 20 calls on cases from the old 145-case set, to confirm that every field in §5 is written and that the API reports thinking tokens for this model. These calls are not data and touch no case of the corpus. Done on 2026-10-06: 20 calls, 20 succeeded, all fields written, request ids present. The API reports thinking tokens in `usage.output_tokens_details.thinking_tokens`; in 2 of 20 calls the value was 0.
 
-**9.3 Anchor on Tamba's items (`TBD`: to be settled before the commit).** Run Tamba's Zenodo harness (record 20674090, v1.1) and, on the same day, send the same seven items through the call-and-record loop used here. Purpose: check the instrument, not compare rates. The items are CC-BY-NC-ND and are not redistributed.
+**9.3 Smoke check on Tamba's seven items.** The seven items of the Zenodo record 20674090 (v1.1) are sent once each through the call-and-record loop used here, with the grader prompt and the grade extraction of that harness and the same model and thinking setting as §2, with no sampling parameters. The only purpose is to confirm that every field in §5 is written for a second prompt and parser. No rate is computed and nothing is compared with the paper. The items are used with the author's agreement (issue #1) and are not redistributed.
 
 ## 10. Stopping rule and budget
 
@@ -189,3 +193,8 @@ The author maintains digline, an open source regression gate for LLM application
 - A base rate for LLM judges in general, or for safety evaluations.
 - Any comparison of rates with Tamba's seven items.
 - Any statement about the cause of disagreement beyond what §7.3 and §8.3 can support.
+- That the recorded `model` value identifies what served a request. It is the requested name as returned by the API, not proof of the serving model.
+
+## 17. Contributions
+
+Alessandro Prandini: corpus, design, scripts, first draft of this protocol. Hiroki Tamba: review of the protocol before the freeze; the breakdown of bins by modal verdict and the per-case error counts (#4); the caveat on the `model` field, the recording of serving-side identifiers and the labelled/deferred breakdown (#5); the reduction of the anchor to a smoke check (#1). The question comes from §5.4 of his paper (arXiv:2606.26185).
