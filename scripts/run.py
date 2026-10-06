@@ -2,13 +2,15 @@
 """One run of the experiment (PROTOCOL.md §4, §5, §6).
 
 Usage:
-    python3 scripts/run.py --cases corpus/cases.jsonl --run-index 1 --seed N
+    python3 scripts/run.py --cases corpus/cases.jsonl --run-index 1 [--seed 101]
     python3 scripts/run.py --cases corpus/cases.jsonl --run-index 1 --dry-run
 
-Every call is serial. The order of cases is shuffled with --seed; the samples
-of a case are consecutive calls. One JSONL line per call is written and synced
-to disk before the next call starts. Nothing is ever discarded or redrawn: an
-error is a line with `error` set.
+Every call is serial. The order of cases is shuffled with the run's seed, fixed
+by PROTOCOL.md §4 (runs 1 to 6: 101 to 106). Without --seed it is taken from
+that table; a --seed that does not match --run-index refuses to start. The
+samples of a case are consecutive calls. One JSONL line per call is written
+and synced to disk before the next call starts. Nothing is ever discarded or
+redrawn: an error is a line with `error` set.
 
 Resuming: if the output file exists, the (case, sample) pairs already in it are
 skipped and the run continues in the same order. Each session, interruption and
@@ -57,6 +59,8 @@ PROTOCOL_PATH = REPO / "PROTOCOL.md"
 REQUIREMENTS_PATH = REPO / "requirements.txt"
 
 RUNS = range(1, 7)
+# The shuffle seed of each run, as fixed in PROTOCOL.md §4.
+SEEDS = {1: 101, 2: 102, 3: 103, 4: 104, 5: 105, 6: 106}
 
 # Where PROTOCOL.md states each hash. A TBD in its place fails the check.
 PROTOCOL_HASHES = {
@@ -465,8 +469,13 @@ def main(argv: list[str] | None = None,
     args = parser.parse_args(argv)
     if args.samples < 1:
         parser.error("--samples must be at least 1")
-    if args.seed is None and not args.dry_run:
-        parser.error("--seed is required except with --dry-run")
+    if not args.dry_run:
+        expected = SEEDS[args.run_index]
+        if args.seed is None:
+            args.seed = expected
+        elif args.seed != expected:
+            parser.error(f"--seed {args.seed} is not the seed of run {args.run_index}: "
+                         f"PROTOCOL.md §4 fixes {expected}")
     out = args.out or REPO / "raw" / f"run-{args.run_index:02d}.jsonl"
 
     try:

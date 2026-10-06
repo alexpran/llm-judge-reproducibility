@@ -426,8 +426,9 @@ class MainTest(unittest.TestCase):
             patch.stop()
         self.tmp.cleanup()
 
-    def argv(self, *extra: str) -> list[str]:
-        return ["--cases", str(self.cases), "--run-index", "1", "--seed", "3",
+    def argv(self, *extra: str, seed: str | None = "101") -> list[str]:
+        seed_args = ["--seed", seed] if seed is not None else []
+        return ["--cases", str(self.cases), "--run-index", "1", *seed_args,
                 "--samples", "1", "--out", str(self.out), *extra]
 
     def test_dirty_tree_refuses_a_real_run(self):
@@ -447,6 +448,25 @@ class MainTest(unittest.TestCase):
         self.assertIn(f"python={platform.python_implementation()} "
                       f"{platform.python_version()}", log)
         self.assertIn("allow_dirty: working tree had 1 uncommitted path(s)", log)
+
+    def test_seed_other_than_the_protocol_refuses(self):
+        with mock.patch.object(run, "repo_state", side_effect=AssertionError("asked")), \
+                mock.patch("sys.stderr"):
+            with self.assertRaises(SystemExit):
+                run.main(self.argv(seed="102"), make_client=FakeClient)
+        self.assertFalse(self.out.exists())
+
+    def test_missing_seed_is_taken_from_the_protocol(self):
+        with mock.patch.object(run, "repo_state", lambda: ("abc123", [])):
+            run.main(self.argv(seed=None), make_client=FakeClient)
+        self.assertIn("start run=1 seed=101 ", self.out.with_suffix(".log").read_text())
+        self.assertEqual({json.loads(l)["seed"] for l in self.out.read_text().splitlines()},
+                         {101})
+
+    def test_seeds_are_the_ones_stated_in_protocol(self):
+        text = run.PROTOCOL_PATH.read_text(encoding="utf-8")
+        seeds = ", ".join(str(run.SEEDS[i]) for i in run.RUNS)
+        self.assertIn(f"with a fixed seed: {seeds} for runs 1 to 6.", text)
 
     def test_dry_run_ignores_a_dirty_tree(self):
         with mock.patch.object(run, "repo_state", side_effect=AssertionError("asked")):
