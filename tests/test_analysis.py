@@ -237,6 +237,38 @@ class DefinitionsTest(unittest.TestCase):
         self.assertEqual(result["8.4"]["run_day"]["2"], "2026-10-13")
 
 
+class ServingTest(unittest.TestCase):
+    def test_serving_values_and_attempts(self):
+        text = matrix({"p001": runs_of("sssss"), "p002": runs_of("Assss", "sssss", "sssss",
+                                                                 "sssss", "sssss", "sssss")})
+        rows = list(csv.DictReader(io.StringIO(text)))
+        for row in rows:
+            if row["error_type"]:
+                row["attempts"] = "0"
+                continue
+            row.update(model="claude-sonnet-5", service_tier="standard", inference_geo="global")
+            if row["public_id"] == "p001" and row["run"] == "3":
+                row.update(service_tier="priority", attempts="2")
+            if row["public_id"] == "p001" and row["run"] == "4" and row["sample"] == "1":
+                row["attempts"] = "4"
+        out = io.StringIO()
+        writer = csv.DictWriter(out, fieldnames=list(make_matrix.COLUMNS), lineterminator="\n")
+        writer.writeheader()
+        writer.writerows(rows)
+        loaded, planned = load(out.getvalue())
+        result = analyze.analyse(loaded, planned, permutations=10)["8.8"]
+        whole = result["all"]
+        self.assertEqual(whole["calls"], 60)
+        self.assertEqual(whole["model"], {"claude-sonnet-5": 59, "null": 1})
+        self.assertEqual(whole["service_tier"], {"null": 1, "priority": 5, "standard": 54})
+        self.assertEqual(whole["inference_geo"], {"global": 59, "null": 1})
+        self.assertEqual(whole["attempts"], {"0": 1, "1": 53, "2": 5, "3+": 1})
+        self.assertEqual(set(result["by_run"]), {"1", "2", "3", "4", "5", "6"})
+        self.assertEqual(result["by_run"]["1"]["model"], {"claude-sonnet-5": 9, "null": 1})
+        self.assertEqual(result["by_run"]["3"]["service_tier"], {"priority": 5, "standard": 5})
+        self.assertEqual(result["by_run"]["4"]["attempts"], {"0": 0, "1": 9, "2": 0, "3+": 1})
+
+
 class IntervalTest(unittest.TestCase):
     def test_closed_forms(self):
         for n in (1, 10, 30, 533):
@@ -352,7 +384,7 @@ class MainTest(unittest.TestCase):
                 outputs.append([(tmp / name / f).read_bytes() for f in ("analysis.json", "tables.md")])
         self.assertEqual(outputs[0], outputs[1])
         tables = outputs[0][1].decode()
-        for label in ("| rare flips |", "| coin-like |", "| below threshold |"):
+        for label in ("| rare flips |", "| coin-like |", "| below threshold |", "## 8.8 Serving metadata"):
             self.assertIn(label, tables)
         self.assertEqual(json.loads(outputs[0][0])["threshold"]["min_valid"], 25)
 

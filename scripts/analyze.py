@@ -40,7 +40,10 @@ Definitions, including the details PROTOCOL.md left open:
   number of cases whose two run verdicts differ, and whether the two runs fall
   on the same day;
 - §8.5: bin counts only;
-- §8.7: an error is the one value "error", over every planned sample.
+- §8.7: an error is the one value "error", over every planned sample;
+- §8.8: a call with no value for model, service_tier or inference_geo (no
+  response arrived, or the response carried none) counts under "null";
+  attempts are grouped as 0 (no HTTP response received), 1, 2 and "3+".
 """
 
 from __future__ import annotations
@@ -71,6 +74,9 @@ ROME = ZoneInfo("Europe/Rome")
 TIE = "tie"
 NO_VALID = "none"
 ERROR = "error"
+NULL = "null"
+SERVING_COLUMNS = ("model", "service_tier", "inference_geo")
+ATTEMPT_GROUPS = ("0", "1", "2", "3+")
 
 
 class Stop(Exception):
@@ -485,7 +491,24 @@ def analyse(cases: list[Case], planned: int, permutations: int = PERMUTATIONS) -
 
     # §8.7: every planned sample counts, so no case falls below the threshold.
     result["8.7"] = distribution(cases, Case.with_error_value, 0, zero_bound=False)
+
+    # §8.8
+    all_rows = [r for c in cases for r in c.rows]
+    result["8.8"] = {"all": serving(all_rows),
+                     "by_run": {str(run): serving([r for r in all_rows if int(r["run"]) == run])
+                                for run in runs}}
     return result
+
+
+def serving(rows: list[dict]) -> dict:
+    """Distinct serving values with their number of calls, and attempts (§8.8)."""
+    out = {"calls": len(rows)}
+    for column in SERVING_COLUMNS:
+        counts = Counter(r[column] or NULL for r in rows)
+        out[column] = dict(sorted(counts.items()))
+    attempts = Counter(min(int(r["attempts"]), 3) for r in rows)
+    out["attempts"] = {ATTEMPT_GROUPS[k]: attempts[k] for k in range(4)}
+    return out
 
 
 # --- Tables ---------------------------------------------------------------------------
@@ -581,6 +604,16 @@ def tables(result: dict) -> str:
         out.append(f"| {run} | {v['calls']} | {v['errors']} | {v['rate']} | "
                    + " | ".join(str(v["by_type"][t]) for t in ERROR_TYPES) + " |")
     out += ["", "## 8.7 Sensitivity: an error as its own value", "", *dist_table(result["8.7"]), ""]
+    out += ["## 8.8 Serving metadata", ""]
+    scopes = {"all": result["8.8"]["all"], **{f"run {k}": v for k, v in result["8.8"]["by_run"].items()}}
+    for column in (*SERVING_COLUMNS, "attempts"):
+        values = sorted({v for scope in scopes.values() for v in scope[column]},
+                        key=lambda v: (ATTEMPT_GROUPS.index(v) if column == "attempts" else 0, v))
+        out += [f"`{column}`:", "", "| Calls | " + " | ".join(values) + " |",
+                "|---|" + "---|" * len(values)]
+        out += [f"| {name} ({scope['calls']}) | " + " | ".join(str(scope[column].get(v, 0)) for v in values) + " |"
+                for name, scope in scopes.items()]
+        out.append("")
     return "\n".join(out)
 
 
