@@ -1,0 +1,5 @@
+source_repo:   scout
+source_commit: dfd5187ac0ddaa5968c6b777a1f56f406f21203b
+JUDGE.md       sha256 c9c8d0a0a81e45c793ae99debf4ba403793bd8b137277194f10681513ecd118e
+THREAD.md      sha256 ffdce2b2f9e527bc83c81e6dfb328a3bbfe0666687e7597dc8d91f7d4dc591e0
+Copied byte for byte from the files at that commit (git show dfd5187ac0ddaa5968c6b777a1f56f406f21203b:<file>).

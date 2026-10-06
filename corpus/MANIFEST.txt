@@ -1,0 +1,11 @@
+Frozen copy of scout's state file (seen.json). The file itself is not in this repository.
+
+sha256:          d76b72b9b2b8e9ec0ad55deef4faab1ad8dda285a8f5188166f05015ad4de567
+copied_at:       2026-10-06 10:10:50 CEST
+last_judged_at:  2026-10-05T06:39:34Z
+
+Counts (inclusion rule in PROTOCOL.md §3):
+cases:                    533
+proposed by the judge:     49
+skipped by the judge:     484
+with expected verdict:    211
