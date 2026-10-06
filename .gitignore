@@ -1,0 +1,25 @@
+# Corpus: nothing under corpus/ is tracked except MANIFEST.txt
+corpus/*
+!corpus/MANIFEST.txt
+corpus/*.json
+corpus/*.jsonl
+
+# Copies of scout's state file, anywhere
+seen*.json
+
+# Raw per-call JSONL (contains thread text)
+raw/
+
+# Secrets
+.env
+.env.*
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
