@@ -23,7 +23,13 @@ The SDK reads ANTHROPIC_API_KEY from the environment. --dry-run builds every
 request and needs neither the key, the SDK, a clean tree nor the network.
 
 Every line has `error_type`: null, "api", "parse", "refusal" or "max_tokens"
-(PROTOCOL.md §6), and `error` with the detail.
+(PROTOCOL.md §6), and `error` with the detail. It also has the headers of the
+last HTTP response of the call (`response_headers`, null if none arrived) and
+the status of every response, retries included (`attempts`,
+`attempt_statuses`). They are read by a response hook on the HTTP client the
+SDK builds; the hook reads no body and leaves the request as it is. If the hook
+fails on a response, the failure is logged and `hook_failed` is true: that
+response is then missing from `attempts`.
 """
 
 from __future__ import annotations
@@ -174,13 +180,64 @@ def cost_of(usage: dict | None) -> float:
     )
 
 
-def call_once(client: Any, request: dict, vars: dict[str, str]) -> dict:
+class ResponseRecorder:
+    """Response hook on the SDK's own HTTP client. It sees every HTTP response
+    of a call, retries included, and reads only the status and the headers,
+    never the body. It never raises: a failure is kept in `failures` for the
+    caller to log, and the call goes on. The request is not touched."""
+
+    def __init__(self) -> None:
+        self.reset()
+
+    def reset(self) -> None:
+        self.statuses: list[int] = []
+        self.headers: dict[str, str] | None = None
+        self.failures: list[str] = []
+
+    def __call__(self, response: Any) -> None:
+        try:
+            status = int(response.status_code)
+            headers = dict(response.headers.items())
+            self.statuses.append(status)
+            self.headers = headers
+        except Exception as exc:  # noqa: BLE001 — must never break the call
+            try:
+                self.failures.append(f"{type(exc).__name__}: {exc}")
+            except Exception:  # noqa: BLE001
+                pass
+
+
+def hooks_of(client: Any) -> list:
+    """The response hook list of the HTTP client the SDK built. `_client` is
+    private: anthropic is pinned (requirements.txt) and a test checks it."""
+    try:
+        hooks = client._client.event_hooks["response"]
+    except (AttributeError, KeyError, TypeError) as exc:
+        raise Stop(f"cannot reach the SDK's response hooks: {exc}") from exc
+    if not isinstance(hooks, list):
+        raise Stop(f"the SDK's response hooks are a {type(hooks).__name__}, not a list")
+    return hooks
+
+
+def log_hook_failures(path: Path, recorder: ResponseRecorder, where: str) -> None:
+    for failure in recorder.failures:
+        log(path, f"response hook failed on {where}: {failure}")
+
+
+def call_once(client: Any, request: dict, vars: dict[str, str],
+              recorder: ResponseRecorder) -> dict:
     """One call and everything known about it. Never raises for an API or
-    parsing failure: that becomes `error` on the line."""
+    parsing failure: that becomes `error` on the line. `recorder` must be
+    attached to the client's response hooks."""
+    recorder.reset()
     line: dict[str, Any] = {
         "started_at": utc_now(),
         "latency_ms": None,
         "request_id": None,
+        "response_headers": None,
+        "attempts": 0,
+        "attempt_statuses": [],
+        "hook_failed": False,
         "model": None,
         "stop_reason": None,
         "raw_text": None,
@@ -200,11 +257,13 @@ def call_once(client: Any, request: dict, vars: dict[str, str]) -> dict:
         reply = client.messages.create(**request)
     except Exception as exc:  # noqa: BLE001 — after the SDK's own retries
         line["latency_ms"] = round((time.perf_counter() - started) * 1000, 1)
+        record_responses(line, recorder)
         line["request_id"] = getattr(exc, "request_id", None)
         line["error_type"] = "api"
         line["error"] = f"{type(exc).__name__}: {exc}"
         return line
     line["latency_ms"] = round((time.perf_counter() - started) * 1000, 1)
+    record_responses(line, recorder)
     line["request_id"] = getattr(reply, "_request_id", None)
     line["model"] = getattr(reply, "model", None)
     line["stop_reason"] = getattr(reply, "stop_reason", None)
@@ -237,6 +296,15 @@ def call_once(client: Any, request: dict, vars: dict[str, str]) -> dict:
     line["angle"] = answer["angle"]
     line["tool_refused"] = settled["tool_refused"]
     return line
+
+
+def record_responses(line: dict, recorder: ResponseRecorder) -> None:
+    """Headers of the last HTTP response, and the status of every one. A
+    response the hook failed on is missing from both: `hook_failed` says so."""
+    line["response_headers"] = recorder.headers
+    line["attempts"] = len(recorder.statuses)
+    line["attempt_statuses"] = list(recorder.statuses)
+    line["hook_failed"] = bool(recorder.failures)
 
 
 # --- The run -------------------------------------------------------------------
@@ -289,6 +357,7 @@ def run(
     dirty_paths: int = 0,
 ) -> dict:
     log_path = log_path or out.with_suffix(".log")
+    hooks = hooks_of(client)
     out.parent.mkdir(parents=True, exist_ok=True)
     by_id = {c["case_id"]: c for c in cases}
     order = run_order(list(by_id), seed)
@@ -311,6 +380,8 @@ def run(
 
     written = 0
     status = "complete"
+    recorder = ResponseRecorder()
+    hooks.append(recorder)
     try:
         with out.open("a", encoding="utf-8") as handle:
             for case_id in order:
@@ -326,7 +397,8 @@ def run(
                                       f"--max-usd {max_usd} before {case_id} "
                                       f"sample {sample}")
                         return summary(status, existing, written, planned, spent)
-                    line = call_once(client, request, vars)
+                    line = call_once(client, request, vars, recorder)
+                    log_hook_failures(log_path, recorder, f"{case_id} sample {sample}")
                     row = {"case_id": case_id, "stratum": case["stratum"],
                            "run": run_index, "seed": seed, "sample": sample, **line}
                     append_line(handle, row)
@@ -336,6 +408,8 @@ def run(
         log(log_path, f"interrupted: {type(exc).__name__}: {exc} "
                       f"after {written} lines in this session")
         raise
+    finally:
+        hooks.remove(recorder)
     log(log_path, f"end run={run_index}: {written} lines in this session, "
                   f"{len(existing) + written} of {planned} in total, "
                   f"estimated cost {spent:.4f} USD")

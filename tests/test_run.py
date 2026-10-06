@@ -62,18 +62,31 @@ class APIError(Exception):
     request_id = "req_failed"
 
 
+def http(status: int, **headers: str) -> SimpleNamespace:
+    """An HTTP response as the response hook sees it: status and headers."""
+    return SimpleNamespace(status_code=status, headers={"request-id": "req_test", **headers})
+
+
 class FakeClient:
     """Replies from a function of the call number (1-based). The function may
-    return a reply or raise."""
+    return a reply or raise. Before that, the HTTP responses given by
+    `responses` (default: one 200) go through the response hooks, as the
+    SDK's HTTP client would send them."""
 
-    def __init__(self, behaviour=None) -> None:
+    def __init__(self, behaviour=None, responses=None) -> None:
         self.calls: list[dict] = []
         self.behaviour = behaviour or (lambda n: reply(answer()))
+        self.responses = responses or (lambda n: [http(200)])
         self.messages = self
+        self._client = SimpleNamespace(event_hooks={"request": [], "response": []})
 
     def create(self, **kwargs):
         self.calls.append(kwargs)
-        return self.behaviour(len(self.calls))
+        n = len(self.calls)
+        for response in self.responses(n):
+            for hook in self._client.event_hooks["response"]:
+                hook(response)
+        return self.behaviour(n)
 
 
 class RunTest(unittest.TestCase):
@@ -205,11 +218,81 @@ class RunTest(unittest.TestCase):
         for key in ("case_id", "stratum", "run", "sample", "started_at", "latency_ms",
                     "request_id", "model", "stop_reason", "raw_text", "verdict_raw",
                     "verdict_settled", "usage", "thinking_tokens", "cost_usd", "seed",
-                    "error_type", "error"):
+                    "error_type", "error", "response_headers", "attempts",
+                    "attempt_statuses", "hook_failed"):
             self.assertIn(key, row)
         self.assertEqual(row["thinking_tokens"], 40)
         self.assertEqual(row["usage"]["output_tokens_details"]["thinking_tokens"], 40)
         self.assertAlmostEqual(row["cost_usd"], (1000 * 3 + 200 * 15) / 1e6)
+
+    def test_every_line_has_the_response_fields(self):
+        self.go([make_case(1), make_case(2)], FakeClient(), samples=2)
+        for row in self.rows():
+            self.assertEqual(row["response_headers"], {"request-id": "req_test"})
+            self.assertEqual((row["attempts"], row["attempt_statuses"]), (1, [200]))
+            self.assertIs(row["hook_failed"], False)
+
+    def test_retry_keeps_the_headers_of_the_last_response(self):
+        client = FakeClient(responses=lambda n: [http(529, **{"request-id": "req_first"}),
+                                                 http(200, **{"request-id": "req_last"})])
+        self.go([make_case(1)], client, samples=1)
+        row = self.rows()[0]
+        self.assertEqual(row["response_headers"], {"request-id": "req_last"})
+        self.assertEqual((row["attempts"], row["attempt_statuses"]), (2, [529, 200]))
+        self.assertIsNone(row["error_type"])
+
+    def test_api_error_with_a_response_keeps_its_headers(self):
+        def behaviour(n):
+            raise APIError("overloaded")
+        client = FakeClient(behaviour, responses=lambda n: [http(529), http(529), http(529)])
+        self.go([make_case(1)], client, samples=1)
+        row = self.rows()[0]
+        self.assertEqual(row["error_type"], "api")
+        self.assertEqual(row["response_headers"], {"request-id": "req_test"})
+        self.assertEqual((row["attempts"], row["attempt_statuses"]), (3, [529, 529, 529]))
+
+    def test_api_error_without_a_response_has_null_headers(self):
+        def behaviour(n):
+            raise APIError("connection refused")
+        self.go([make_case(1)], FakeClient(behaviour, responses=lambda n: []), samples=1)
+        row = self.rows()[0]
+        self.assertEqual(row["error_type"], "api")
+        self.assertIsNone(row["response_headers"])
+        self.assertEqual((row["attempts"], row["attempt_statuses"]), (0, []))
+        self.assertIs(row["hook_failed"], False)
+
+    def test_counts_do_not_leak_between_calls(self):
+        client = FakeClient(responses=lambda n: [http(529), http(200)] if n == 1 else [http(200)])
+        self.go([make_case(1)], client, samples=2)
+        self.assertEqual([r["attempt_statuses"] for r in self.rows()], [[529, 200], [200]])
+
+    def test_a_failing_hook_is_logged_and_the_call_goes_on(self):
+        class BadHeaders:
+            def items(self):
+                raise ValueError("unreadable")
+        broken = SimpleNamespace(status_code=200, headers=BadHeaders())
+        client = FakeClient(responses=lambda n: [http(529), broken] if n == 1 else [http(200)])
+        self.go([make_case(1)], client, samples=2)
+        first, second = self.rows()
+        self.assertEqual(first["verdict_raw"], "skip")
+        self.assertIs(first["hook_failed"], True)
+        self.assertEqual((first["attempts"], first["attempt_statuses"]), (1, [529]))
+        self.assertIs(second["hook_failed"], False)
+        self.assertEqual(second["attempts"], 1)
+        self.assertIn("response hook failed on c001 sample 1: ValueError: unreadable",
+                      self.out.with_suffix(".log").read_text())
+
+    def test_the_hook_is_removed_after_the_run(self):
+        client = FakeClient()
+        self.go([make_case(1)], client, samples=1)
+        self.assertEqual(client._client.event_hooks["response"], [])
+
+    def test_a_client_without_response_hooks_refuses_to_start(self):
+        client = FakeClient()
+        del client._client
+        with self.assertRaises(run.Stop):
+            self.go([make_case(1)], client, samples=1)
+        self.assertFalse(self.out.exists())
 
     def test_max_usd_stops_before_the_call(self):
         client = FakeClient()  # each call costs 0.006
@@ -249,6 +332,78 @@ class RunTest(unittest.TestCase):
     def test_raw_lines_carry_only_case_ids(self):
         self.go([make_case(1)], FakeClient(), samples=1)
         self.assertNotIn("Synthetic thread", self.out.read_text())
+
+
+try:
+    import anthropic
+    import httpx2
+except ImportError:  # the tests above need neither
+    anthropic = None
+
+
+@unittest.skipIf(anthropic is None, "anthropic is not installed")
+class SdkHookTest(unittest.TestCase):
+    """The real pinned SDK, with its transport replaced by a function: no
+    network. The hook reaches the client the SDK builds, and adding it does not
+    change what is sent."""
+
+    def setUp(self) -> None:
+        self.sent: list[tuple] = []
+        self.statuses: list[int] = []
+        sent, statuses = self.sent, self.statuses
+
+        def transport(_self, request):
+            request.read()
+            sent.append((request.method, str(request.url), dict(request.headers),
+                         request.content))
+            status = statuses.pop(0) if statuses else 200
+            body = reply_json() if status == 200 else {"type": "error", "error": {
+                "type": "overloaded_error", "message": "Overloaded"}}
+            return httpx2.Response(status, json=body, request=request, headers={
+                "request-id": f"req_{len(sent)}", "retry-after-ms": "1"})
+
+        patch = mock.patch.object(httpx2.HTTPTransport, "handle_request", transport)
+        patch.start()
+        self.addCleanup(patch.stop)
+        self.request = judge.build_request(run.case_vars(make_case(1)), PROMPTS)
+
+    def test_sdk_client_has_event_hooks(self):
+        client = anthropic.Anthropic(api_key="test")
+        self.assertIsInstance(client._client.event_hooks["response"], list)
+        self.assertIsInstance(run.hooks_of(client), list)
+
+    def test_the_hook_does_not_change_the_request(self):
+        volatile = {"x-stainless-retry-count"}
+
+        def wire(entry):
+            method, url, headers, body = entry
+            return method, url, {k: v for k, v in headers.items() if k not in volatile}, body
+
+        anthropic.Anthropic(api_key="test").messages.create(**self.request)
+        hooked = anthropic.Anthropic(api_key="test")
+        recorder = run.ResponseRecorder()
+        run.hooks_of(hooked).append(recorder)
+        run.call_once(hooked, self.request, run.case_vars(make_case(1)), recorder)
+        self.assertEqual(wire(self.sent[0]), wire(self.sent[1]))
+        self.assertEqual(recorder.statuses, [200])
+
+    def test_sdk_retry_is_seen_as_two_responses(self):
+        self.statuses.append(529)
+        client = anthropic.Anthropic(api_key="test")
+        recorder = run.ResponseRecorder()
+        run.hooks_of(client).append(recorder)
+        line = run.call_once(client, self.request, run.case_vars(make_case(1)), recorder)
+        self.assertEqual((line["attempts"], line["attempt_statuses"]), (2, [529, 200]))
+        self.assertEqual(line["response_headers"]["request-id"], "req_2")
+        self.assertEqual(line["request_id"], "req_2")
+        self.assertIs(line["hook_failed"], False)
+
+
+def reply_json() -> dict:
+    return {"id": "msg_test", "type": "message", "role": "assistant",
+            "model": "claude-sonnet-5", "content": [{"type": "text", "text": answer()}],
+            "stop_reason": "end_turn", "stop_sequence": None,
+            "usage": {"input_tokens": 1, "output_tokens": 1}}
 
 
 class MainTest(unittest.TestCase):

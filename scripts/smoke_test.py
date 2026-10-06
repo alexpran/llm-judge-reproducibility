@@ -91,6 +91,8 @@ def main() -> None:
                            f"requirements.txt pins {pinned}")
         repo_sha, dirty = run.repo_state()
         client = anthropic.Anthropic()
+        recorder = run.ResponseRecorder()
+        run.hooks_of(client).append(recorder)
     except run.Stop as exc:
         sys.exit(f"smoke_test: {exc}")
 
@@ -113,7 +115,8 @@ def main() -> None:
                     run.log(log_path, f"stop: estimated cost {spent:.4f} USD reached "
                                       f"--max-usd {args.max_usd}")
                     sys.exit(f"smoke_test: budget reached after {made} calls")
-                line = run.call_once(client, request, vars)
+                line = run.call_once(client, request, vars, recorder)
+                run.log_hook_failures(log_path, recorder, f"s{index:02d} sample {sample}")
                 run.append_line(handle, {"case_id": f"s{index:02d}", "stratum": stratum,
                                          "run": 0, "seed": None, "sample": sample,
                                          **line})
