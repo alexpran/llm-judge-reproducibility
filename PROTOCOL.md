@@ -46,6 +46,8 @@ sha256 `d76b72b9b2b8e9ec0ad55deef4faab1ad8dda285a8f5188166f05015ad4de567`. Last 
 
 **Inclusion rule.** Every thread judged by scout from 2026-09-18 to 2026-10-05 (Rome time), excluding `duplicate` records (crosspost copies never sent to the judge). The rule does not look at the verdict or at the human label.
 
+All 533 cases come from the feed; none was added by hand.
+
 **Why this window.** From 18 September the judge used the same model, the same vocabulary and the same committed prompt as today, and every judged thread was reviewed by hand.
 
 | | Total | Proposed by the judge | Skipped by the judge |
@@ -55,9 +57,9 @@ sha256 `d76b72b9b2b8e9ec0ad55deef4faab1ad8dda285a8f5188166f05015ad4de567`. Last 
 
 - **Strata.** "Proposed" means the original verdict was `comment`, `comment+tool` or `upvote`. "Skipped" means `skip`. Both strata are included in full.
 - **Labels.** Labels were typed by the author at review time. 322 cases carry the label `deferred`, which has no expected verdict. Deferral is not random and its reasons are not recorded.
-- **Input per case.** `title`, `subreddit`, `flair`, `text`, `commented_titles`, exactly as stored at the original judgement. `text` is truncated at 1500 characters. `flair` is empty for all cases. Cases with empty `text`: `TBD` (count from the export).
+- **Input per case.** `title`, `subreddit`, `flair`, `text`, `commented_titles`, exactly as stored at the original judgement. `text` is truncated at 1500 characters. `flair` is empty for all cases. Cases with empty `text`: 17 (3 proposed, 14 skipped).
 - **Judging days.** The 533 cases come from ten days: 18/09, 22–25/09, 29/09–2/10, 5/10.
-- **Export.** A deterministic script reads only the frozen copy and writes the case file. sha256 of the case file: `TBD`.
+- **Export.** A deterministic script reads only the frozen copy and writes the case file. sha256 of the case file: `e8e09fc9eaf93c6fabe49c37a4ca3a8cb31d8a39f71ca975ceda4f724c270645`.
 
 Known limits of the corpus:
 
