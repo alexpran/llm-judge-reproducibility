@@ -28,7 +28,13 @@ Raw per-call logs (`raw/`) contain thread text and are not tracked either.
 - `DEVIATIONS.md`: departures from the frozen protocol
 - `prompts/`: the judge's system prompt and user template, copied from `scout` (see `prompts/SOURCE.txt`)
 - `corpus/MANIFEST.txt`: hash and counts of the corpus
-- `scripts/`, `results/`: empty for now
+- `scripts/`: case export, run script, request identity check
+- `tests/`: offline tests for the run script (no network)
+- `results/`: empty for now
+
+## Environment
+
+Python 3.14, the version of scout's production environment. Dependencies: `pip install -r requirements.txt`.
 
 ## License
 
