@@ -29,6 +29,7 @@ What this is not:
 | System prompt | `JUDGE.md`, sha256 `c9c8d0a0a81e45c793ae99debf4ba403793bd8b137277194f10681513ecd118e` |
 | User template | `THREAD.md`, sha256 `ffdce2b2f9e527bc83c81e6dfb328a3bbfe0666687e7597dc8d91f7d4dc591e0` |
 | Source of prompts | scout at commit `dfd5187ac0ddaa5968c6b777a1f56f406f21203b`, copied to `prompts/` |
+| SDK | anthropic 1.4.0 (pinned in requirements.txt), same version as production |
 | Sampling parameters | none sent (`temperature`, `top_p`, `top_k`, `seed` absent) |
 | Verdict vocabulary | `comment`, `comment+tool`, `upvote`, `skip` |
 | Calls | one thread per call, no batching |
@@ -81,7 +82,7 @@ Known limits of the corpus:
 
 ## 5. What is recorded for each call
 
-One JSONL line per call: case id, stratum, run index, sample index, start timestamp (UTC), latency, request id, model returned by the API, `stop_reason`, raw response text, parsed raw verdict, verdict after `settle_tool`, token usage including thinking tokens, cost, and the error if any.
+One JSONL line per call: `case_id`, `stratum`, `run` (run index), `seed` (the run's shuffle seed), `sample` (sample index), `started_at` (start timestamp, UTC), `latency_ms`, `request_id`, `model` (as returned by the API), `stop_reason`, `raw_text` (raw response text), `verdict_raw` (parsed verdict, before `settle_tool`), `verdict_settled` (after `settle_tool`), `why`, `angle`, `tool_refused`, `usage` (the full usage object returned by the API), `thinking_tokens`, `cost_usd` (estimated from the token counts and list prices, not billed), `error_type` (null, `api`, `parse`, `refusal` or `max_tokens`, see §6) and `error` (the detail). Each run's log records the SDK version and the commit of this repository.
 
 Samples already obtained are never discarded because a later call on the same case fails.
 
@@ -93,7 +94,7 @@ Samples already obtained are never discarded because a later call on the same ca
 2. *Settled verdict*: after `settle_tool`.
 3. *Pass/fail*: whether the settled verdict agrees with the expected verdict. Defined only for the 211 labelled cases. `comment+tool` counts as agreement with a `commented` label, as in production.
 
-**Errors.** An API error after the SDK's default retries, a response that fails the schema, or a refusal is recorded as an error. It is never a verdict and it is not redrawn.
+**Errors.** An error is one of: an API failure after the SDK's default retries (`api`); a response rejected by scout's own parser, which is more permissive than the JSON schema and is kept as in production (`parse`); a refusal (`refusal`); a response cut at `max_tokens` before a verdict (`max_tokens`). An error is never a verdict and is not redrawn.
 
 **Per-case stability.** Modal share = frequency of the most common raw verdict among the valid samples of a case, divided by the number of valid samples.
 
@@ -179,7 +180,7 @@ The corpus itself is not published. It is real threads together with the author'
 
 ## 15. Interest
 
-The author maintains digline, an open source regression gate for LLM applications that measures a noise floor of this kind. The experiment script does not use digline. The pilot runs in §13 were produced with it.
+The author maintains digline, an open source regression gate for LLM applications that measures a noise floor of this kind. The experiment script does not depend on digline. It contains a small amount of code copied from digline and digline-anthropic (prompt rendering and extraction of the response text), marked in the source, so that the request is identical to production. The pilot runs in §13 were produced with digline.
 
 ## 16. What will not be claimed
 
