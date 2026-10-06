@@ -9,3 +9,9 @@ cases:                    533
 proposed by the judge:     49
 skipped by the judge:     484
 with expected verdict:    211
+
+Case file (written by scripts/export_cases.py from the frozen copy above; not in this repository):
+file:             corpus/cases.jsonl
+sha256:           e8e09fc9eaf93c6fabe49c37a4ca3a8cb31d8a39f71ca975ceda4f724c270645
+cases with empty text:  17 (proposed 3, skipped 14)
+judging days:           10
