@@ -86,6 +86,8 @@ One JSONL line per call: `case_id`, `stratum`, `run` (run index), `seed` (the ru
 
 Samples already obtained are never discarded because a later call on the same case fails.
 
+`usage` includes the serving metadata returned by the API (`service_tier`, `inference_geo`); any variation across calls is reported.
+
 ## 6. Definitions
 
 **Verdict levels.**
@@ -123,7 +125,7 @@ Where a count is zero, the result is reported as an upper bound, not as zero.
 
 1. The same distribution on the settled verdict, and on pass/fail for the 211 labelled cases.
 2. Discrimination next to reproducibility: agreement of each case's overall modal verdict with the expected verdict, per stratum, and whether unstable cases concentrate among the disagreements.
-3. Thinking tokens against disagreement: rank correlation between a case's mean thinking tokens and 1 − modal share. Hypothesis stated in advance: longer reasoning gives more points where a near-tie can diverge, so disagreement rises with thinking length.
+3. Thinking tokens against disagreement: rank correlation between a case's mean thinking tokens and 1 − modal share. Hypothesis stated in advance: longer reasoning gives more points where a near-tie can diverge, so disagreement rises with thinking length. With adaptive thinking some calls report zero thinking tokens. Disagreement is also compared between cases where thinking is always present, never present, or present in only some of the 30 calls.
 4. Concentration by original judging day, and by run day.
 5. Cases with empty `text`, reported separately.
 6. Error rate by run.
@@ -132,16 +134,16 @@ No other analysis will be reported as planned.
 
 ## 9. Instrument checks
 
-**9.1 Request identity.** On `TBD` cases from the old 145-case set, the request built by the experiment script equals the one built by `ScoutJudge`, compared by hash.
+**9.1 Request identity.** The request built by the experiment script equals the one built by scout's `ScoutJudge`, compared by hash of the canonical JSON of the arguments, on all 144 cases of the old set and on all 533 cases of the corpus: 677 of 677 identical. A negative control (one space added to the system prompt) gave 0 of 677. No request was sent.
 
-**9.2 Smoke test.** About 20 calls on cases from the old 145-case set, to confirm that every field in §5 is written and that the API reports thinking tokens for this model. These calls are not data and touch no case of the corpus.
+**9.2 Smoke test.** About 20 calls on cases from the old 145-case set, to confirm that every field in §5 is written and that the API reports thinking tokens for this model. These calls are not data and touch no case of the corpus. Done on 2026-10-06: 20 calls, 20 succeeded, all fields written, request ids present. The API reports thinking tokens in `usage.output_tokens_details.thinking_tokens`; in 2 of 20 calls the value was 0.
 
 **9.3 Anchor on Tamba's items (`TBD`: to be settled before the commit).** Run Tamba's Zenodo harness (record 20674090, v1.1) and, on the same day, send the same seven items through the call-and-record loop used here. Purpose: check the instrument, not compare rates. The items are CC-BY-NC-ND and are not redistributed.
 
 ## 10. Stopping rule and budget
 
 - There is no stopping rule based on results. All planned calls are made.
-- Budget cap: 250 USD. Estimate from earlier runs on a different population: about 150 USD and about 15.5 hours of serial calls.
+- Budget cap: 350 USD. Estimates: about 150 USD and 15.5 hours of serial calls from the pilot runs, about 216 USD and 30 hours from the smoke test (20 calls). Both come from a different population.
 - A run is the unit. If the remaining budget cannot cover the next run at the observed cost per call, the experiment stops there and the analysis uses the completed runs. This is reported.
 - An interrupted run is resumed from the point of interruption with the same seed, and the interruption is logged with timestamps.
 
@@ -154,7 +156,7 @@ Anything that departs from this document is written in `DEVIATIONS.md`, with dat
 | Date (UTC) | What | Calls reaching the API |
 |---|---|---|
 | 2026-10-06 08:13 | Probe: `temperature=0` with adaptive thinking on `claude-sonnet-5`. HTTP 400. Request `req_011CfkeaXnRr7xwxDgxiDwnK` | 1 |
-| `TBD` | Smoke test (§9.2) | `TBD` |
+| 2026-10-06 12:28–12:30 | Smoke test (§9.2): 10 cases from the old set × 2 calls | 20 |
 
 No call has been made on any of the 533 cases.
 
