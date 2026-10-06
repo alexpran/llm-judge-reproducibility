@@ -133,7 +133,7 @@ No other analysis will be reported as planned.
 
 **9.2 Smoke test.** About 20 calls on cases from the old 145-case set, to confirm that every field in §5 is written and that the API reports thinking tokens for this model. These calls are not data and touch no case of the corpus.
 
-**9.3 Anchor on Tamba's items (`TBD`: to be settled before the commit).** Run Tamba's Zenodo harness (record 20674090, v1.1) unmodified in an environment with `anthropic<1`, and on the same day send the same seven items through the call-and-record loop used here. Purpose: check the instrument, not compare rates. The items are CC-BY-NC-ND and are not redistributed.
+**9.3 Anchor on Tamba's items (`TBD`: to be settled before the commit).** Run Tamba's Zenodo harness (record 20674090, v1.1) and, on the same day, send the same seven items through the call-and-record loop used here. Purpose: check the instrument, not compare rates. The items are CC-BY-NC-ND and are not redistributed.
 
 ## 10. Stopping rule and budget
 
@@ -151,7 +151,6 @@ Anything that departs from this document is written in `DEVIATIONS.md`, with dat
 | Date (UTC) | What | Calls reaching the API |
 |---|---|---|
 | 2026-10-06 08:13 | Probe: `temperature=0` with adaptive thinking on `claude-sonnet-5`. HTTP 400. Request `req_011CfkeaXnRr7xwxDgxiDwnK` | 1 |
-| 2026-10-06 | Tamba's harness run as published, with a placeholder key | 0 |
 | `TBD` | Smoke test (§9.2) | `TBD` |
 
 No call has been made on any of the 533 cases.
