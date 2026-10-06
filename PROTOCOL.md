@@ -123,7 +123,7 @@ Cases with fewer than 25 valid samples are reported in a separate row and not bi
 3. Whether between-run variation exceeds what within-run variation predicts. Test statistic: number of between-run unstable cases. Reference distribution: 10,000 permutations of each case's 30 samples across its six runs, seed `TBD`. Reported as the observed value against the permutation distribution.
 4. For each case, the number of errors by type is reported next to its bin.
 
-Where a count is zero, the result is reported as an upper bound, not as zero.
+Where a count is zero, the result is reported as an upper bound, not as zero. The stable bin is itself an upper bound: on the pilot, about one in eight cases that flip over 75 samples shows no flip in 30.
 
 ## 8. Secondary analyses (declared, exploratory)
 
@@ -172,11 +172,12 @@ No call has been made on any of the 533 cases.
 Fifteen earlier runs exist on a different population: the 145-case regression suite (144 threads judged before 13 September and selected by label, plus one synthetic canary), 17–21 September, three runs per day, five samples per case, same prompt hashes, model and vocabulary as in §2. Only aggregates were looked at:
 
 - across the three runs of one day, pass/fail changes on 1 to 6 cases, the majority verdict on 8 to 12, the set of five verdicts on 25 to 30;
-- within a single run, 19 to 27 cases have non-unanimous samples.
+- within a single run, 19 to 27 cases have non-unanimous samples;
+- over all available samples per case (up to 75; 144 cases, canary excluded), on the raw verdict: 104 cases stable, 22 with rare flips, 11 unstable, 7 coin-like; 40 cases have at least one non-unanimous run and 20 have run verdicts that are not all equal.
 
-Limits of the pilot: retrospective; selected population rich in proposed threads; the tool used to run it drops all samples of a case when one call fails, so errors are invisible; raw verdict reconstructed, not recorded.
+Limits of the pilot: retrospective; selected population rich in proposed threads; the tool used to run it drops all samples of a case when one call fails, so errors are invisible; raw verdict reconstructed, not recorded; samples were lost in blocks of five, so 30 cases have 70 or 65 samples instead of 75.
 
-Use made of it: choosing 30 samples per case and the bin boundaries in §6. `TBD`: confirm on the pilot that these choices separate the bins, in aggregate only, before the commit.
+Use made of it: choosing 30 samples per case and the bin boundaries in §6. Check made before the freeze, with a criterion fixed in advance: over all 5005 subsets of 6 runs out of 15, at least 80% of cases must stay in the same bin with 30 samples as with 75, and fewer than 2% may move by more than one bin. Result on the raw verdict: 92.4% in the same bin (minimum 86.1%), 0.0% moving by more than one bin (maximum 0.7%); the settled verdict gives 91.7% and 0.0%. Of the 40 cases that are not stable over 75 samples, a median of 5 appear stable with 30 (range 2 to 10). The 30 samples are a subset of the 75, so this agreement is somewhat optimistic. No alternative boundaries were tried. The check is in `scripts/pilot_check.py`.
 
 ## 14. What is published
 
