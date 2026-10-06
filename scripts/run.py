@@ -226,10 +226,15 @@ def log_hook_failures(path: Path, recorder: ResponseRecorder, where: str) -> Non
 
 
 def call_once(client: Any, request: dict, vars: dict[str, str],
-              recorder: ResponseRecorder) -> dict:
+              recorder: ResponseRecorder,
+              read: Callable[[str], dict] | None = None) -> dict:
     """One call and everything known about it. Never raises for an API or
     parsing failure: that becomes `error` on the line. `recorder` must be
-    attached to the client's response hooks."""
+    attached to the client's response hooks.
+
+    `read` replaces scout's parser for another prompt (PROTOCOL.md §9.3): it
+    takes the reply text, returns the fields to add to the line, and raises
+    when the reply cannot be read. scout's verdict fields then stay null."""
     recorder.reset()
     line: dict[str, Any] = {
         "started_at": utc_now(),
@@ -282,13 +287,16 @@ def call_once(client: Any, request: dict, vars: dict[str, str],
         line["error"] = "stop_reason refusal"
         return line
     try:
-        answer = judge.parse(line["raw_text"])
+        answer = (read or judge.parse)(line["raw_text"])
     except Exception as exc:  # noqa: BLE001
         # Cut at the cap before a readable verdict is the cap's failure, not
         # the parser's. A readable verdict at the cap is still a verdict.
         cut = line["stop_reason"] == "max_tokens"
         line["error_type"] = "max_tokens" if cut else "parse"
         line["error"] = f"{type(exc).__name__}: {exc}"
+        return line
+    if read is not None:
+        line.update(answer)
         return line
     settled = judge.settle_tool(answer, vars)
     line["verdict_raw"] = answer["verdict"]
