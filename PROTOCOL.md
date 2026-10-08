@@ -1,8 +1,8 @@
 # Run-to-run disagreement of an LLM judge on a real corpus: protocol
 
-**Version:** v0 (draft, not yet committed)
+**Version:** v1 (frozen on 2026-10-08)
 **Author:** Alessandro Prandini
-**Status:** no call has been made on the corpus described here. Items marked `TBD` must be filled before the commit that freezes this document. After that commit, any change goes in `DEVIATIONS.md` with a date and a reason.
+**Status:** frozen. Both contributors agreed on this text on 2026-10-08 (issue #3). No call had been made on the corpus at the time of the freeze. Any later change goes in `DEVIATIONS.md` with a date and a reason.
 
 ## 1. Question and scope
 

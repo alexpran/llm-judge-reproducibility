@@ -6,7 +6,7 @@ The question is how disagreement is distributed across cases: how many are stabl
 
 ## Status
 
-- `PROTOCOL.md` is a **draft, not yet frozen**. No open item is left in the protocol. It is a draft until both authors agree on the freeze.
+- The protocol is frozen at tag `protocol-v1` (2026-10-08). The runs start on the first working day after the freeze.
 - **No call has been made on the corpus.** Calls made before the protocol are listed in `PROTOCOL.md` §12.
 - There are no results.
 
