@@ -10,12 +10,6 @@ seen*.json
 # Raw per-call JSONL (contains thread text)
 raw/
 
-# Results: not published until decided (PROTOCOL.md §14)
-results/matrix.csv
-results/analysis.json
-results/tables.md
-results/MANIFEST.txt
-
 # Secrets
 .env
 .env.*
@@ -32,3 +26,6 @@ __pycache__/
 
 # IDE
 .idea/
+
+# macOS
+.DS_Store
