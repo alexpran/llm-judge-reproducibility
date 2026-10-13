@@ -6,9 +6,7 @@ The question is how disagreement is distributed across cases: how many are stabl
 
 ## Status
 
-- The protocol is frozen at tag `protocol-v1` (2026-10-08). The runs start on the first working day after the freeze.
-- **No call has been made on the corpus.** Calls made before the protocol are listed in `PROTOCOL.md` §12.
-- There are no results.
+The protocol is frozen at tag `protocol-v1` (2026-10-08). The six runs were made on 9, 12 and 13 October 2026. The matrix and the output of the analysis are in `results/`. No interpretation has been written yet. Calls made before the protocol are listed in `PROTOCOL.md` §12.
 
 ## The corpus is not in this repository
 
@@ -47,7 +45,15 @@ All response headers of each call are kept in the raw files (`raw/`, not tracked
   - `analyze.py`: the analyses of §6–§8, from the matrix alone
   - `pilot_to_matrix.py`: first six pilot runs in the matrix format, for a cross-check of `analyze.py` against `pilot_check.py`
 - `tests/`: offline tests for the run, anchor smoke check, matrix and analysis scripts (no network)
-- `results/`: matrix, analysis and their MANIFEST once produced; not tracked until they are published
+- `results/`:
+  - `matrix.csv`: one row per call, with public ids (§14)
+  - `analysis.json`, `tables.md`: output of `analyze.py` on the matrix
+  - `MANIFEST.txt`: sha256 of the six raw files and of the matrix
+  - `RUNS.md`: times, calls, errors, attempts and estimated cost of each run
+
+## AI assistance
+
+The scripts and the first draft of the protocol were written with Claude (Anthropic) under Alessandro Prandini's direction. Design decisions, checks and the reading of every result are the authors'.
 
 ## Environment
 
