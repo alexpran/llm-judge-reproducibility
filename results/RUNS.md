@@ -26,6 +26,6 @@ The same for all six runs, as recorded in each run's log:
 
 No verdict was looked at before the sixth run was closed.
 
-The analysis was run twice with identical output on 2026-10-13.
+The analysis was run twice with identical output on 2026-10-13. Regenerated on 2026-10-14 with the post hoc section; §7 and §8 verified unchanged against the committed files.
 
 Costs are estimates computed from the token counts with a price list read in August 2026; they are not billed amounts.

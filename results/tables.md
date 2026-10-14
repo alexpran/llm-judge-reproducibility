@@ -270,3 +270,16 @@ Run day: run 1 2026-10-09, run 2 2026-10-09, run 3 2026-10-12, run 4 2026-10-12,
 | run 5 (2665) | 0 | 2665 | 0 | 0 |
 | run 6 (2665) | 0 | 2665 | 0 | 0 |
 
+## Post hoc
+
+Added on 2026-10-14 at the co-author's request, after the results were seen. Not part of the frozen protocol.
+
+### 8.3 by stratum
+
+Spearman rho, mean thinking tokens against 1 − modal share, with the exclusions of §8.3.
+
+| Stratum | Cases | Spearman rho | Below threshold, left out | No thinking tokens, left out |
+|---|---|---|---|---|
+| proposed | 49 | 0.496777 | 0 | 0 |
+| skipped | 484 | 0.603298 | 0 | 0 |
+
