@@ -233,11 +233,15 @@ class MatrixTest(unittest.TestCase):
 
 
 class IgnoredTest(unittest.TestCase):
-    def test_private_and_unpublished_files_are_ignored_by_git(self):
-        for path in ("corpus/public_ids.json", "results/matrix.csv", "results/analysis.json",
-                     "results/tables.md", "results/MANIFEST.txt"):
+    def test_private_files_are_ignored_and_results_tracked_by_git(self):
+        for path in ("raw/", "corpus/cases.jsonl", "corpus/case_ids.json", "corpus/public_ids.json"):
             ignored = subprocess.run(["git", "-C", str(REPO), "check-ignore", "-q", path])
             self.assertEqual(ignored.returncode, 0, path)
+        for path in ("results/matrix.csv", "results/analysis.json", "results/tables.md",
+                     "results/MANIFEST.txt"):
+            tracked = subprocess.run(["git", "-C", str(REPO), "ls-files", "--error-unmatch", path],
+                                     capture_output=True)
+            self.assertEqual(tracked.returncode, 0, path)
 
 
 if __name__ == "__main__":

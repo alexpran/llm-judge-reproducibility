@@ -44,6 +44,11 @@ Definitions, including the details PROTOCOL.md left open:
 - §8.8: a call with no value for model, service_tier or inference_geo (no
   response arrived, or the response carried none) counts under "null";
   attempts are grouped as 0 (no HTTP response received), 1, 2 and "3+".
+
+Post hoc, not part of the frozen protocol (added on 2026-10-14 at the
+co-author's request, after the results were seen): each case's mean thinking
+tokens, as in §8.3 (null if no call reports them), and the rank correlation of
+§8.3 per stratum, with the same exclusions.
 """
 
 from __future__ import annotations
@@ -77,6 +82,8 @@ ERROR = "error"
 NULL = "null"
 SERVING_COLUMNS = ("model", "service_tier", "inference_geo")
 ATTEMPT_GROUPS = ("0", "1", "2", "3+")
+POST_HOC_NOTE = ("Added on 2026-10-14 at the co-author's request, after the results were seen. "
+                 "Not part of the frozen protocol.")
 
 
 class Stop(Exception):
@@ -238,6 +245,14 @@ class Case:
     def with_error_value(self) -> list[str]:
         return [ERROR if r["error_type"] else r["verdict_raw"] for r in self.rows]
 
+    def thinking_tokens(self) -> list[int]:
+        """Thinking tokens of every call that reports them, errors included (§8.3)."""
+        return [int(r["thinking_tokens"]) for r in self.rows if r["thinking_tokens"] != ""]
+
+    def mean_thinking_tokens(self) -> float | None:
+        tokens = self.thinking_tokens()
+        return sum(tokens) / len(tokens) if tokens else None
+
 
 def check_manifest(matrix: Path) -> str:
     """The matrix's sha256, which must be the one MANIFEST.txt next to it states."""
@@ -377,6 +392,7 @@ def analyse(cases: list[Case], planned: int, permutations: int = PERMUTATIONS) -
         "non_unanimous_runs": sum(non_unanimous(v) for v in c.per_run()),
         "between_run_unstable": between_unstable(c.per_run()),
         "errors": c.errors(),
+        "mean_thinking_tokens": r6(c.mean_thinking_tokens()),
     } for c in cases]
 
     # §7.1
@@ -433,12 +449,12 @@ def analyse(cases: list[Case], planned: int, permutations: int = PERMUTATIONS) -
     groups: dict[str, list[str]] = {"always": [], "never": [], "some": []}
     no_tokens = 0
     for c in binned:
-        tokens = [int(r["thinking_tokens"]) for r in c.rows if r["thinking_tokens"] != ""]
+        tokens = c.thinking_tokens()
         if not tokens:
             no_tokens += 1
             continue
         values = c.valid()
-        xs.append(sum(tokens) / len(tokens))
+        xs.append(c.mean_thinking_tokens())
         ys.append(1 - modal(values)[0] / len(values))
         present = sum(t > 0 for t in tokens)
         group = "always" if present == len(tokens) else "never" if present == 0 else "some"
@@ -497,6 +513,21 @@ def analyse(cases: list[Case], planned: int, permutations: int = PERMUTATIONS) -
     result["8.8"] = {"all": serving(all_rows),
                      "by_run": {str(run): serving([r for r in all_rows if int(r["run"]) == run])
                                 for run in runs}}
+
+    # Post hoc, not in the frozen protocol: the §8.3 correlation per stratum.
+    per_stratum = {}
+    for g, members in groups_of(cases).items():
+        if g == "all":
+            continue
+        kept = [c for c in members if c in binned]
+        with_tokens = [c for c in kept if c.thinking_tokens()]
+        xs = [c.mean_thinking_tokens() for c in with_tokens]
+        ys = [1 - modal(c.valid())[0] / len(c.valid()) for c in with_tokens]
+        per_stratum[g] = {"cases": len(with_tokens),
+                          "below_threshold_left_out": len(members) - len(kept),
+                          "no_thinking_tokens": len(kept) - len(with_tokens),
+                          "spearman_rho": r6(spearman(xs, ys)) if len(xs) > 1 else None}
+    result["post_hoc"] = {"note": POST_HOC_NOTE, "8.3_by_stratum": per_stratum}
     return result
 
 
@@ -614,6 +645,14 @@ def tables(result: dict) -> str:
         out += [f"| {name} ({scope['calls']}) | " + " | ".join(str(scope[column].get(v, 0)) for v in values) + " |"
                 for name, scope in scopes.items()]
         out.append("")
+    out += ["## Post hoc", "", result["post_hoc"]["note"], "",
+            "### 8.3 by stratum", "",
+            "Spearman rho, mean thinking tokens against 1 − modal share, with the exclusions of §8.3.", "",
+            "| Stratum | Cases | Spearman rho | Below threshold, left out | No thinking tokens, left out |",
+            "|---|---|---|---|---|"]
+    out += [f"| {g} | {e['cases']} | {e['spearman_rho']} | {e['below_threshold_left_out']} | "
+            f"{e['no_thinking_tokens']} |" for g, e in result["post_hoc"]["8.3_by_stratum"].items()]
+    out.append("")
     return "\n".join(out)
 
 

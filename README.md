@@ -47,7 +47,7 @@ All response headers of each call are kept in the raw files (`raw/`, not tracked
 - `tests/`: offline tests for the run, anchor smoke check, matrix and analysis scripts (no network)
 - `results/`:
   - `matrix.csv`: one row per call, with public ids (§14)
-  - `analysis.json`, `tables.md`: output of `analyze.py` on the matrix
+  - `analysis.json`, `tables.md`: output of `analyze.py` on the matrix, with a final 'Post hoc' section, not part of the frozen analysis (see DEVIATIONS.md)
   - `MANIFEST.txt`: sha256 of the six raw files and of the matrix
   - `RUNS.md`: times, calls, errors, attempts and estimated cost of each run
 

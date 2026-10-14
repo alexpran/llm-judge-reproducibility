@@ -212,6 +212,38 @@ class DefinitionsTest(unittest.TestCase):
         # p003's two zeros are on its parse errors: counted, so p003 is "some".
         self.assertEqual({g: v["cases"] for g, v in groups.items()}, {"always": 1, "never": 1, "some": 1})
         self.assertEqual(groups["some"]["bins"][STABLE], 1)
+        means = {c["public_id"]: c["mean_thinking_tokens"] for c in result["cases"]}
+        self.assertEqual(means, {"p001": 100.0, "p002": 0.0, "p003": round(50 * 28 / 30, 6)})
+
+    def test_mean_thinking_tokens_leaves_out_calls_that_report_none(self):
+        # The api errors report no thinking tokens; a case with none at all is null.
+        cases = {"p001": runs_of("AAsss", "sssss", "sssss", "sssss", "sssss", "sssss"),
+                 "p002": runs_of("sssss")}
+        result = analyse(cases, thinking={"p001": ["", ""] + ["40"] * 28, "p002": [""] * 30})
+        means = {c["public_id"]: c["mean_thinking_tokens"] for c in result["cases"]}
+        self.assertEqual(means, {"p001": 40.0, "p002": None})
+        self.assertEqual(result["8.3"]["no_thinking_tokens"], 1)
+
+    def test_post_hoc_correlation_per_stratum(self):
+        # proposed: more thinking, more disagreement; skipped: the reverse.
+        cases = {"p001": split(30), "p002": split(24), "p003": split(18),
+                 "p004": split(30), "p005": split(24), "p006": split(18),
+                 "p007": runs_of("AAAAA", "Ascss", "sssss", "sssss", "sssss", "sssss"),
+                 "p008": runs_of("sssss")}
+        stratum = {"p001": "proposed", "p002": "proposed", "p003": "proposed", "p007": "proposed"}
+        thinking = {"p001": ["10"] * 30, "p002": ["20"] * 30, "p003": ["30"] * 30,
+                    "p004": ["30"] * 30, "p005": ["20"] * 30, "p006": ["10"] * 30,
+                    "p008": [""] * 30}
+        result = analyse(cases, stratum=stratum, thinking=thinking)
+        post = result["post_hoc"]
+        self.assertTrue(post["note"].startswith("Added on 2026-10-14 at the co-author's request"))
+        self.assertEqual(post["8.3_by_stratum"]["proposed"],
+                         {"cases": 3, "below_threshold_left_out": 1, "no_thinking_tokens": 0,
+                          "spearman_rho": 1.0})
+        self.assertEqual(post["8.3_by_stratum"]["skipped"],
+                         {"cases": 3, "below_threshold_left_out": 0, "no_thinking_tokens": 1,
+                          "spearman_rho": -1.0})
+        self.assertEqual((result["8.3"]["cases"], result["8.3"]["no_thinking_tokens"]), (6, 1))
 
     def test_spearman(self):
         self.assertAlmostEqual(analyze.spearman([1, 2, 3, 4], [10, 20, 30, 40]), 1.0)
@@ -386,6 +418,10 @@ class MainTest(unittest.TestCase):
         tables = outputs[0][1].decode()
         for label in ("| rare flips |", "| coin-like |", "| below threshold |", "## 8.8 Serving metadata"):
             self.assertIn(label, tables)
+        post_hoc = tables.split("\n## Post hoc\n", 1)
+        self.assertEqual(len(post_hoc), 2)
+        self.assertNotIn("\n## ", post_hoc[1])  # the last section
+        self.assertTrue(post_hoc[1].lstrip().startswith(analyze.POST_HOC_NOTE))
         self.assertEqual(json.loads(outputs[0][0])["threshold"]["min_valid"], 25)
 
 
